@@ -1,16 +1,16 @@
 package main
 
 import (
-  "log"
-  "fmt"
-  "encoding/json"
-  "os"
-  "path/filepath"
-  "bufio"
-  "strings"
+	"bufio"
+	"encoding/json"
+	"fmt"
+	"log"
+	"os"
+	"path/filepath"
+	"strings"
 
-  "github.com/trivago/grok"
-  "github.com/mcuadros/go-syslog"
+	"github.com/mcuadros/go-syslog"
+	"github.com/trivago/grok"
 )
 
 func loadPatterns(path string, config *grok.Config) error {
@@ -66,76 +66,78 @@ func loadPatterns(path string, config *grok.Config) error {
 }
 
 func startSyslogServer(grok *grok.Grok, config *grok.Config) {
-  channel := make(syslog.LogPartsChannel)
-  handler := syslog.NewChannelHandler(channel)
+	channel := make(syslog.LogPartsChannel)
+	handler := syslog.NewChannelHandler(channel)
 
-  server := syslog.NewServer()
-  server.SetFormat(syslog.Automatic)
-  server.SetHandler(handler)
-  log.Printf("Booting syslog server")
-  server.ListenUDP("0.0.0.0:1514")
-  server.Boot()
+	server := syslog.NewServer()
+	server.SetFormat(syslog.Automatic)
+	server.SetHandler(handler)
+	log.Printf("Booting syslog server")
+	server.ListenUDP("0.0.0.0:1514")
+	server.Boot()
 
-  go func(channel syslog.LogPartsChannel) {
-    for logParts := range channel {
-      var message string
-      if contentVal, ok := logParts["message"]; ok && contentVal != nil {
-        message = contentVal.(string)
-      } else {
-        log.Println("No content in logParts or content is nil")
-        continue // skip this iteration
-      }
+	go func(channel syslog.LogPartsChannel) {
+		for logParts := range channel {
+			go processLogMessage(logParts, grok, config)
+		}
+	}(channel)
 
-      tags := extractSyslogMetadataAsTags(logParts)
-      parsedMessage := map[string]interface{}{}
+	server.Wait()
+}
 
-      // Before Grok parsing
-      if len(message) > 0  {
-        // Loop through patterns
-        for _, pattern := range config.Patterns {
-          values, err := grok.Parse(pattern, []byte(message))
-          if err == nil && len(values) > 0 {
-            for k, v := range values {
-              parsedMessage[k] = string(v)
-            }
-          }
-        }
-      } else {
-        log.Println("No message in logParts or message is nil")
-      }
+func processLogMessage(logParts map[string]interface{}, grok *grok.Grok, config *grok.Config) {
+	var message string
+	if contentVal, ok := logParts["message"]; ok && contentVal != nil {
+		message = contentVal.(string)
+	} else {
+		log.Println("No content in logParts or content is nil")
+		return
+	}
 
-      // Convert the structured message to JSON format for Kafka
-      logData := LogData{
-        Tags:          tags,
-        Message:       message,
-        ParsedMessage: parsedMessage,
-      }
+	tags := extractSyslogMetadataAsTags(logParts)
+	parsedMessage := map[string]interface{}{}
 
-      jsonData, err := json.Marshal(logData)
-      if err != nil {
-        log.Printf("Error marshaling log data: %v", err)
-        continue
-      }
+	// Before Grok parsing
+	if len(message) > 0 {
+		// Loop through patterns
+		for _, pattern := range config.Patterns {
+			values, err := grok.Parse(pattern, []byte(message))
+			if err == nil && len(values) > 0 {
+				for k, v := range values {
+					parsedMessage[k] = string(v)
+				}
+			}
+		}
+	} else {
+		log.Println("No message in logParts or message is nil")
+	}
 
-      err = produceToKafka(jsonData)
-      if err != nil {
-        log.Printf("Failed to produce message to Kafka: %v", err)
-      }
+	// Convert the structured message to JSON format for Kafka
+	logData := LogData{
+		Tags:          tags,
+		Message:       message,
+		ParsedMessage: parsedMessage,
+	}
 
-      log.Printf("Sent message to kafka")
-    }
-  }(channel)
+	jsonData, err := json.Marshal(logData)
+	if err != nil {
+		log.Printf("Error marshaling log data: %v", err)
+		return
+	}
 
-  server.Wait()
+	err = produceToKafka(jsonData)
+	if err != nil {
+		log.Printf("Failed to produce message to Kafka: %v", err)
+	}
 }
 
 // Convert syslog metadata fields into tags
 func extractSyslogMetadataAsTags(logParts map[string]interface{}) map[string]string {
-  tags := make(map[string]string)
-  for k, v := range logParts {
-    if k != "message" { // Skip the actual message content
-      tags[k] = fmt.Sprintf("%v", v) // Convert the value to string format
-    }
-  }
-  return tags
+	tags := make(map[string]string)
+	for k, v := range logParts {
+		if k != "message" { // Skip the actual message content
+			tags[k] = fmt.Sprintf("%v", v) // Convert the value to string format
+		}
+	}
+	return tags
 }
