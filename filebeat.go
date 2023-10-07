@@ -3,8 +3,9 @@ package hummingbird
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/trivago/grok"
 	"net/http"
+
+	"github.com/trivago/grok"
 )
 
 type FilebeatHandler struct {
