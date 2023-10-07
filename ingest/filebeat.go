@@ -1,4 +1,4 @@
-package hummingbird
+package main
 
 import (
 	"encoding/json"
