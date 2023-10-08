@@ -13,7 +13,7 @@ $ make all
 $ bin/hummingbird_ingest # this starts the ingest node
 ```
 
-##🏛 Architecture
+## 🏛 Architecture
 
 The `hummingbird` system is structured into a series of services that handle log ingestion, processing, and storage.
 
