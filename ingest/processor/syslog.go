@@ -1,4 +1,4 @@
-package main
+package processor
 
 import (
 	"bufio"
@@ -11,20 +11,23 @@ import (
 
 	"github.com/mcuadros/go-syslog"
 	"github.com/trivago/grok"
+  "github.com/adamenger/hummingbird/ingest"
+  "github.com/adamenger/hummingbird/ingest/publisher"
 )
 
 type SyslogProcessor struct {
 	Grok          *grok.Grok
 	Config        *grok.Config
-	Publisher     Publisher
+	Publisher     publisher.Publisher
 	PatternsPath  string
 	SyslogChannel syslog.LogPartsChannel
 }
 
-func NewSyslogProcessor(patternsPath string) (*SyslogProcessor, error) {
+func NewSyslogProcessor(patternsPath string, publisher publisher.Publisher) (*SyslogProcessor, error) {
 	sp := &SyslogProcessor{
 		PatternsPath:  patternsPath,
 		SyslogChannel: make(syslog.LogPartsChannel),
+    Publisher:     publisher,
 	}
 	config := grok.Config{}
 	err := sp.LoadPatterns(&config)
@@ -142,7 +145,7 @@ func (sp *SyslogProcessor) ProcessLogMessage(logParts map[string]interface{}) {
 	}
 
 	// Convert the structured message to JSON format for Kafka
-	logData := LogData{
+	logData := ingest.LogData{
 		Tags:          tags,
 		Message:       message,
 		ParsedMessage: parsedMessage,

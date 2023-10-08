@@ -12,10 +12,10 @@ OUTPUT_DIR=bin
 all: ingest digest
 
 ingest:
-	cd ingest && $(GOBUILD) -o ../$(OUTPUT_DIR)/hummingbird_ingest -v
+	cd ingest/cmd && $(GOBUILD) -o ../../$(OUTPUT_DIR)/hummingbird_ingest -v
 
 digest:
-	cd digest && $(GOBUILD) -o ../$(OUTPUT_DIR)/hummingbird_digest -v
+	cd digest/cmd && $(GOBUILD) -o ../$(OUTPUT_DIR)/hummingbird_digest -v
 
 format:
 	$(GOFMT) -s -w ingest/.
@@ -37,4 +37,3 @@ run-digest: digest
 	./$(OUTPUT_DIR)/hummingbird_digest
 
 .PHONY: all ingest digest format clean test run-ingest run-digest
-

@@ -1,4 +1,4 @@
-package main
+package processor
 
 import (
 	"encoding/json"
@@ -6,11 +6,13 @@ import (
 	"net/http"
 
 	"github.com/trivago/grok"
+  "github.com/adamenger/hummingbird/ingest"
+  "github.com/adamenger/hummingbird/ingest/publisher"
 )
 
 type HttpProcessor struct {
 	Grok      *grok.Grok
-	Publisher Publisher
+	Publisher publisher.Publisher
 }
 
 func (hp *HttpProcessor) HandleRequest(w http.ResponseWriter, r *http.Request) {
@@ -21,7 +23,7 @@ func (hp *HttpProcessor) HandleRequest(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Parse the request body into the LogData struct
-	var data LogData
+	var data ingest.LogData
 	decoder := json.NewDecoder(r.Body)
 	err := decoder.Decode(&data)
 	defer r.Body.Close()

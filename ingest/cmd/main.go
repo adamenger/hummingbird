@@ -3,6 +3,8 @@ package main
 import (
 	"log"
 	"net/http"
+  "github.com/adamenger/hummingbird/ingest/publisher"
+  "github.com/adamenger/hummingbird/ingest/processor"
 )
 
 const (
@@ -17,9 +19,12 @@ type LogData struct {
 }
 
 func main() {
-	kp := &KafkaPublisher{}
-
-	syslogProcessor, err := NewSyslogProcessor("patterns/")
+	
+  kp := &publisher.KafkaPublisher{
+    Broker:  "localhost:9092",
+    Topic:   "filebeat",
+  }
+	syslogProcessor, err := processor.NewSyslogProcessor("patterns/", kp)
 	if err != nil {
 		log.Fatalf("Failed to initialize syslog processor: %v", err)
 	}
@@ -29,14 +34,20 @@ func main() {
 		log.Fatalf("Failed to boot syslog server: %v", err)
 	}
 
-	filebeatProcessor := &FilebeatProcessor{
+	filebeatProcessor := &processor.FilebeatProcessor{
 		Grok:      syslogProcessor.Grok,
-		Publisher: kp,
+		Publisher: &publisher.KafkaPublisher{
+      Broker:  "localhost:9092",
+      Topic:   "filebeat",
+    },
 	}
 
-	httpProcessor := &HttpProcessor{
+	httpProcessor := &processor.HttpProcessor{
 		Grok:      syslogProcessor.Grok,
-		Publisher: kp,
+		Publisher: &publisher.KafkaPublisher{
+      Broker:  "localhost:9092",
+      Topic:   "http",
+    },
 	}
 
 	http.HandleFunc("/ingest", httpProcessor.HandleRequest)

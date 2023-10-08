@@ -5,6 +5,9 @@ get it running. There's a provided `docker-compose.yml` to make this easy.
 Please note it is not for production use or is it complete in any way. The only
 thing that is partially implemented thus far is the ingestion service.
 
+## Note
+I am writing this for _fun_. It may never work. :)
+
 # 🏃 Running
 Assuming you have Golang and Docker installed, from the root of the repo run:
 ```

@@ -1,4 +1,4 @@
-package main
+package processor
 
 import (
 	"encoding/json"
@@ -6,11 +6,13 @@ import (
 	"net/http"
 
 	"github.com/trivago/grok"
+  "github.com/adamenger/hummingbird/ingest"
+  "github.com/adamenger/hummingbird/ingest/publisher"
 )
 
 type FilebeatProcessor struct {
 	Grok      *grok.Grok
-	Publisher Publisher
+	Publisher publisher.Publisher
 }
 
 func (fp *FilebeatProcessor) HandleRequest(w http.ResponseWriter, r *http.Request) {
@@ -32,7 +34,7 @@ func (fp *FilebeatProcessor) HandleRequest(w http.ResponseWriter, r *http.Reques
 	}
 
 	// Convert metadata to tags and populate the LogData struct
-	var data LogData
+	var data ingest.LogData
 	data.Tags = make(map[string]string)
 	for k, v := range payload {
 		if k != "message" {
