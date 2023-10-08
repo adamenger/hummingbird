@@ -2,7 +2,6 @@ package main
 
 import (
 	"bufio"
-	"encoding/json"
 	"fmt"
 	"log"
 	"os"
@@ -65,7 +64,7 @@ func loadPatterns(path string, config *grok.Config) error {
 	return nil
 }
 
-func startSyslogServer(grok *grok.Grok, config *grok.Config) {
+func startSyslogServer(grok *grok.Grok, config *grok.Config, publisher Publisher) {
 	channel := make(syslog.LogPartsChannel)
 	handler := syslog.NewChannelHandler(channel)
 
@@ -76,59 +75,19 @@ func startSyslogServer(grok *grok.Grok, config *grok.Config) {
 	server.ListenUDP("0.0.0.0:1514")
 	server.Boot()
 
+	processor := &SyslogProcessor{
+		Grok:      grok,
+		Config:    config,
+		Publisher: publisher,
+	}
+
 	go func(channel syslog.LogPartsChannel) {
 		for logParts := range channel {
-			go processLogMessage(logParts, grok, config)
+			go processor.ProcessLogMessage(logParts)
 		}
 	}(channel)
 
 	server.Wait()
-}
-
-func processLogMessage(logParts map[string]interface{}, grok *grok.Grok, config *grok.Config) {
-	var message string
-	if contentVal, ok := logParts["message"]; ok && contentVal != nil {
-		message = contentVal.(string)
-	} else {
-		log.Println("No content in logParts or content is nil")
-		return
-	}
-
-	tags := extractSyslogMetadataAsTags(logParts)
-	parsedMessage := map[string]interface{}{}
-
-	// Before Grok parsing
-	if len(message) > 0 {
-		// Loop through patterns
-		for _, pattern := range config.Patterns {
-			values, err := grok.Parse(pattern, []byte(message))
-			if err == nil && len(values) > 0 {
-				for k, v := range values {
-					parsedMessage[k] = string(v)
-				}
-			}
-		}
-	} else {
-		log.Println("No message in logParts or message is nil")
-	}
-
-	// Convert the structured message to JSON format for Kafka
-	logData := LogData{
-		Tags:          tags,
-		Message:       message,
-		ParsedMessage: parsedMessage,
-	}
-
-	jsonData, err := json.Marshal(logData)
-	if err != nil {
-		log.Printf("Error marshaling log data: %v", err)
-		return
-	}
-
-	err = produceToKafka(jsonData)
-	if err != nil {
-		log.Printf("Failed to produce message to Kafka: %v", err)
-	}
 }
 
 // Convert syslog metadata fields into tags

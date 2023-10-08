@@ -8,11 +8,12 @@ import (
 	"github.com/trivago/grok"
 )
 
-type FilebeatHandler struct {
-	Grok *grok.Grok
+type FilebeatProcessor struct {
+	Grok      *grok.Grok
+	Publisher Publisher
 }
 
-func (f *FilebeatHandler) HandleRequest(w http.ResponseWriter, r *http.Request) {
+func (fp *FilebeatProcessor) HandleRequest(w http.ResponseWriter, r *http.Request) {
 	// Ensure it's a POST request
 	if r.Method != "POST" {
 		http.Error(w, "Only POST method is supported", http.StatusBadRequest)
@@ -44,7 +45,7 @@ func (f *FilebeatHandler) HandleRequest(w http.ResponseWriter, r *http.Request) 
 	// Check if the parser tag is available
 	parser, ok := data.Tags["parser"]
 	if ok {
-		values, err := f.Grok.Parse(parser, []byte(data.Message))
+		values, err := fp.Grok.Parse(parser, []byte(data.Message))
 		if err == nil {
 			for k, v := range values {
 				data.ParsedMessage[k] = v
@@ -60,7 +61,7 @@ func (f *FilebeatHandler) HandleRequest(w http.ResponseWriter, r *http.Request) 
 	}
 
 	// Produce the message to Kafka
-	err = produceToKafka(message)
+	err = fp.Publisher.Publish(message)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("Failed to produce message to Kafka: %v", err), http.StatusInternalServerError)
 		return

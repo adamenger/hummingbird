@@ -1,12 +1,19 @@
 package main
 
 import (
-  "fmt"
-  "net/http"
-  "encoding/json"
+	"encoding/json"
+	"fmt"
+	"net/http"
+
+	"github.com/trivago/grok"
 )
 
-func httpIngestHandler(w http.ResponseWriter, r *http.Request) {
+type HttpProcessor struct {
+	Grok      *grok.Grok
+	Publisher Publisher
+}
+
+func (hp *HttpProcessor) HandleRequest(w http.ResponseWriter, r *http.Request) {
 	// Ensure it's a POST request
 	if r.Method != "POST" {
 		http.Error(w, "Only POST method is supported", http.StatusBadRequest)
@@ -37,7 +44,7 @@ func httpIngestHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Produce the message to Kafka
-	err = produceToKafka(message)
+	err = hp.Publisher.Publish(message)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("Failed to produce message to Kafka: %v", err), http.StatusInternalServerError)
 		return
@@ -45,5 +52,3 @@ func httpIngestHandler(w http.ResponseWriter, r *http.Request) {
 
 	w.Write([]byte("Message ingested successfully"))
 }
-
-
