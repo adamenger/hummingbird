@@ -4,5 +4,35 @@ get it running. There's a provided `docker-compose.yml` to make this easy.
 
 ## why the name hummingbird?
 Just as a hummingbird makes countless rapid moves to hover, computer systems 
-execute numerous operations to function seamlessly. With Hummingbird, we 
+execute numerous operations to function seamlessly. With `hummingbird`, we 
 try to capture each essential flutter of your computer systems.
+
+##🏛 Architecture
+
+The `hummingbird` system is structured into a series of services that handle log ingestion, processing, and storage.
+
+### Overview
+
+The following is a visual representation of the system's components and their interactions:
+
+![Hummingbird System Architecture](./architecture.png)
+
+### Components
+
+1. **Ingest Nodes**:
+   - **HTTP Ingest**: Accepts log data through an HTTP endpoints.
+   - **Syslog Ingest**: Listens for syslog formatted log data.
+   - **Filebeat Ingest**: Interfaces with Filebeat to collect logs.
+
+2. **Kafka Queue**:
+   - Serves as a reliable intermediate storage to decouple ingestion from processing. 
+   This ensures that the system remains scalable and can handle large bursts of log data without degradation of service.
+
+3. **Digest Nodes**:
+   - Process and store the ingested log data. Each node can handle a segment of the data, allowing for distributed processing and storage.
+
+### Flow
+
+1. Logs are collected through various ingest nodes.
+2. The collected logs are published to Kafka.
+3. Digest nodes consume logs from Kafka, process them, and store them in segments on disk. 

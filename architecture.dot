@@ -1,0 +1,33 @@
+digraph G {
+    rankdir=LR;
+    node [shape=box];
+    
+    subgraph cluster_0 {
+        style=filled;
+        color=lightgrey;
+        label="Ingest Nodes";
+        node [style=filled, color=white];
+        a [label="HTTP Ingest"];
+        b [label="Syslog Ingest"];
+        c [label="Filebeat Ingest"];
+    }
+
+    subgraph cluster_1 {
+        style=filled;
+        color=lightcoral;
+        label="Digest Nodes";
+        node [style=filled, color=white];
+        x [label="Digest Node 1"];
+        y [label="Digest Node 2"];
+        // ... add more digest nodes if needed
+    }
+
+    k [shape=ellipse, label="Kafka Queue", color=gold];
+
+    a -> k;
+    b -> k;
+    c -> k;
+    k -> x;
+    k -> y;
+    // ... connect kafka to other digest nodes if added
+}
