@@ -1,11 +1,11 @@
-# Hummingbird
+# 🪶 Hummingbird
 This is a toy log ingestion system built in Golang. You'll need Kafka set up to
 get it running. There's a provided `docker-compose.yml` to make this easy.
 
 Please note it is not for production use or is it complete in any way. The only
 thing that is partially implemented thus far is the ingestion service.
 
-# Running
+# 🏃 Running
 Assuming you have Golang and Docker installed, from the root of the repo run:
 ```
 $ docker-compose up -d
