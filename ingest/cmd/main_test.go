@@ -9,6 +9,7 @@ import (
 
 	"github.com/IBM/sarama"
 	"github.com/stretchr/testify/assert"
+  "github.com/adamenger/hummingbird/ingest/publisher"
 )
 
 func TestMain(m *testing.M) {
@@ -35,7 +36,10 @@ func TestMain(m *testing.M) {
 
 func TestKafkaIntegration(t *testing.T) {
 	// Given: A KafkaPublisher
-	kp := &KafkaPublisher{}
+	kp := &publisher.KafkaPublisher{
+    Broker: "localhost:9092",
+    Topic: "kafka_test",
+  }
 
 	// And: A test message
 	message := []byte("Sample message for integration testing")

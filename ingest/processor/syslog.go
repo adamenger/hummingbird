@@ -24,18 +24,20 @@ type SyslogProcessor struct {
 }
 
 func NewSyslogProcessor(patternsPath string, publisher publisher.Publisher) (*SyslogProcessor, error) {
-	sp := &SyslogProcessor{
-		PatternsPath:  patternsPath,
-		SyslogChannel: make(syslog.LogPartsChannel),
-    Publisher:     publisher,
-	}
-	config := grok.Config{}
-	err := sp.LoadPatterns(&config)
+  grokConfig := grok.Config{}
+  syslogGrok, err := grok.New(grokConfig)
 	if err != nil {
 		return nil, err
 	}
 
-	sp.Grok, err = grok.New(config)
+	sp := &SyslogProcessor{
+    Grok:          syslogGrok,
+		PatternsPath:  patternsPath,
+		SyslogChannel: make(syslog.LogPartsChannel),
+    Publisher:     publisher,
+	}
+	
+  err = sp.LoadPatterns()
 	if err != nil {
 		return nil, err
 	}
@@ -64,9 +66,9 @@ func (sp *SyslogProcessor) StartSyslogServer() error {
 	return nil
 }
 
-func (sp *SyslogProcessor) LoadPatterns(config *grok.Config) error {
-	if config.Patterns == nil {
-		config.Patterns = make(map[string]string)
+func (sp *SyslogProcessor) LoadPatterns() error {
+	if sp.Config.Patterns == nil {
+		sp.Config.Patterns = make(map[string]string)
 	}
 
 	// Check if the path points to a directory. If so, append the glob pattern to match .grok files
@@ -106,7 +108,7 @@ func (sp *SyslogProcessor) LoadPatterns(config *grok.Config) error {
 
 			key := parts[0]
 			pattern := parts[1]
-			config.Patterns[key] = pattern
+			sp.Config.Patterns[key] = pattern
 		}
 
 		if err := scanner.Err(); err != nil {
