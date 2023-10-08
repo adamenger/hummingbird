@@ -3,8 +3,6 @@ package main
 import (
 	"log"
 	"net/http"
-
-	"github.com/trivago/grok"
 )
 
 const (
@@ -19,27 +17,25 @@ type LogData struct {
 }
 
 func main() {
-	config := grok.Config{}
-	err := loadPatterns("patterns/", &config)
-	if err != nil {
-		log.Printf("Failed to load grok patterns: %s", err)
-	}
-
-	g, err := grok.New(config)
-	if err != nil {
-		log.Printf("Failed to boot grok parser: %s", err)
-	}
-
 	kp := &KafkaPublisher{}
-	go startSyslogServer(g, &config, kp) // start syslog server
+
+  syslogProcessor, err := NewSyslogProcessor("patterns/")
+  if err != nil {
+    log.Fatalf("Failed to initialize syslog processor: %v", err)
+  }
+
+	go syslogProcessor.StartSyslogServer() // start syslog server
+  if err != nil {
+    log.Fatalf("Failed to boot syslog server: %v", err)
+  }
 
 	filebeatProcessor := &FilebeatProcessor{
-		Grok:      g,
+		Grok:      syslogProcessor.Grok,
 		Publisher: kp,
 	}
 
 	httpProcessor := &HttpProcessor{
-		Grok:      g,
+		Grok:      syslogProcessor.Grok,
 		Publisher: kp,
 	}
 

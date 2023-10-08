@@ -3,14 +3,115 @@ package main
 import (
 	"encoding/json"
 	"log"
+  "os"
+  "path/filepath"
+  "bufio"
+	"fmt"
+	"strings"
 
 	"github.com/trivago/grok"
+	"github.com/mcuadros/go-syslog"
 )
 
 type SyslogProcessor struct {
-	Grok      *grok.Grok
-	Config    *grok.Config
-	Publisher Publisher
+	Grok          *grok.Grok
+	Config        *grok.Config
+	Publisher     Publisher
+  PatternsPath  string
+  SyslogChannel syslog.LogPartsChannel
+}
+
+func NewSyslogProcessor(patternsPath string) (*SyslogProcessor, error) {
+    sp := &SyslogProcessor{
+      PatternsPath: patternsPath,
+      SyslogChannel: make(syslog.LogPartsChannel),
+    }
+    config := grok.Config{}
+    err := sp.LoadPatterns(&config)
+    if err != nil {
+        return nil, err
+    }
+
+    sp.Grok, err = grok.New(config)
+    if err != nil {
+        return nil, err
+    }
+    
+    return sp, nil
+}
+
+func (sp *SyslogProcessor) StartSyslogServer() error {
+	handler := syslog.NewChannelHandler(sp.SyslogChannel)
+
+	server := syslog.NewServer()
+	server.SetFormat(syslog.Automatic)
+	server.SetHandler(handler)
+	server.ListenUDP("0.0.0.0:1514")
+	server.Boot()
+	log.Printf("Booted syslog server")
+
+	go func(channel syslog.LogPartsChannel) {
+		for logParts := range sp.SyslogChannel {
+			go sp.ProcessLogMessage(logParts)
+		}
+	}(sp.SyslogChannel)
+
+	server.Wait()
+
+  return nil
+}
+
+func (sp *SyslogProcessor) LoadPatterns(config *grok.Config) error {
+	if config.Patterns == nil {
+		config.Patterns = make(map[string]string)
+	}
+
+	// Check if the path points to a directory. If so, append the glob pattern to match .grok files
+	if fi, err := os.Stat(sp.PatternsPath); err == nil {
+		if fi.IsDir() {
+			sp.PatternsPath = filepath.Join(sp.PatternsPath, "*.grok")
+		}
+	} else {
+		return fmt.Errorf("invalid path: %s", sp.PatternsPath)
+	}
+
+	files, err := filepath.Glob(sp.PatternsPath)
+	if err != nil {
+		return err
+	}
+
+	for _, fileName := range files {
+		file, err := os.Open(fileName)
+		if err != nil {
+			return err
+		}
+		defer file.Close()
+
+		scanner := bufio.NewScanner(file)
+		for scanner.Scan() {
+			line := scanner.Text()
+			if len(line) == 0 || line[0] == '#' {
+				// Skip empty lines or lines starting with a hash (comments)
+				continue
+			}
+
+			parts := strings.SplitN(line, " ", 2)
+			if len(parts) != 2 {
+				// Skip lines that don't seem to fit the expected pattern
+				continue
+			}
+
+			key := parts[0]
+			pattern := parts[1]
+			config.Patterns[key] = pattern
+		}
+
+		if err := scanner.Err(); err != nil {
+			return err
+		}
+	}
+	return nil
+
 }
 
 func (sp *SyslogProcessor) ProcessLogMessage(logParts map[string]interface{}) {
@@ -57,4 +158,15 @@ func (sp *SyslogProcessor) ProcessLogMessage(logParts map[string]interface{}) {
 	if err != nil {
 		log.Printf("Failed to produce message to Kafka: %v", err)
 	}
+}
+
+// Convert syslog metadata fields into tags
+func extractSyslogMetadataAsTags(logParts map[string]interface{}) map[string]string {
+	tags := make(map[string]string)
+	for k, v := range logParts {
+		if k != "message" { // Skip the actual message content
+			tags[k] = fmt.Sprintf("%v", v) // Convert the value to string format
+		}
+	}
+	return tags
 }
