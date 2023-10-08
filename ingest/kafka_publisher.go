@@ -24,5 +24,4 @@ func (kp *KafkaPublisher) Publish(message []byte) error {
 	})
 
 	return err
-
 }
