@@ -1,43 +1,43 @@
 package main
 
 import (
+	"bufio"
 	"encoding/json"
-	"log"
-  "os"
-  "path/filepath"
-  "bufio"
 	"fmt"
+	"log"
+	"os"
+	"path/filepath"
 	"strings"
 
-	"github.com/trivago/grok"
 	"github.com/mcuadros/go-syslog"
+	"github.com/trivago/grok"
 )
 
 type SyslogProcessor struct {
 	Grok          *grok.Grok
 	Config        *grok.Config
 	Publisher     Publisher
-  PatternsPath  string
-  SyslogChannel syslog.LogPartsChannel
+	PatternsPath  string
+	SyslogChannel syslog.LogPartsChannel
 }
 
 func NewSyslogProcessor(patternsPath string) (*SyslogProcessor, error) {
-    sp := &SyslogProcessor{
-      PatternsPath: patternsPath,
-      SyslogChannel: make(syslog.LogPartsChannel),
-    }
-    config := grok.Config{}
-    err := sp.LoadPatterns(&config)
-    if err != nil {
-        return nil, err
-    }
+	sp := &SyslogProcessor{
+		PatternsPath:  patternsPath,
+		SyslogChannel: make(syslog.LogPartsChannel),
+	}
+	config := grok.Config{}
+	err := sp.LoadPatterns(&config)
+	if err != nil {
+		return nil, err
+	}
 
-    sp.Grok, err = grok.New(config)
-    if err != nil {
-        return nil, err
-    }
-    
-    return sp, nil
+	sp.Grok, err = grok.New(config)
+	if err != nil {
+		return nil, err
+	}
+
+	return sp, nil
 }
 
 func (sp *SyslogProcessor) StartSyslogServer() error {
@@ -58,7 +58,7 @@ func (sp *SyslogProcessor) StartSyslogServer() error {
 
 	server.Wait()
 
-  return nil
+	return nil
 }
 
 func (sp *SyslogProcessor) LoadPatterns(config *grok.Config) error {

@@ -19,15 +19,15 @@ type LogData struct {
 func main() {
 	kp := &KafkaPublisher{}
 
-  syslogProcessor, err := NewSyslogProcessor("patterns/")
-  if err != nil {
-    log.Fatalf("Failed to initialize syslog processor: %v", err)
-  }
+	syslogProcessor, err := NewSyslogProcessor("patterns/")
+	if err != nil {
+		log.Fatalf("Failed to initialize syslog processor: %v", err)
+	}
 
 	go syslogProcessor.StartSyslogServer() // start syslog server
-  if err != nil {
-    log.Fatalf("Failed to boot syslog server: %v", err)
-  }
+	if err != nil {
+		log.Fatalf("Failed to boot syslog server: %v", err)
+	}
 
 	filebeatProcessor := &FilebeatProcessor{
 		Grok:      syslogProcessor.Grok,
