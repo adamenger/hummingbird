@@ -95,7 +95,7 @@ func (sp *SyslogProcessor) ProcessLogMessage(logParts map[string]interface{}) {
 
 	err = sp.Publisher.Publish(jsonData)
 	if err != nil {
-		log.Printf("Failed to produce message to Kafka: %v", err)
+    log.Printf("syslog: Failed to produce message to Kafka: %v", err)
 	}
 }
 

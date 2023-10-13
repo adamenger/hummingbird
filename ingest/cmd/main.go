@@ -8,7 +8,7 @@ import (
 )
 
 const (
-	broker = "localhost:29092"
+  broker = "localhost:29092"
 	topic  = "log_topic"
 )
 
@@ -21,10 +21,10 @@ type LogData struct {
 func main() {
 	
   kp := &publisher.KafkaPublisher{
-    Broker:  "localhost:9092",
+    Broker:  broker,
     Topic:   "filebeat",
   }
-	syslogProcessor, err := processor.NewSyslogProcessor("patterns/syslog", kp)
+	syslogProcessor, err := processor.NewSyslogProcessor("patterns/syslog/", kp)
 	if err != nil {
 		log.Fatalf("Failed to initialize syslog processor: %v", err)
 	}
@@ -37,7 +37,7 @@ func main() {
 	filebeatProcessor := &processor.FilebeatProcessor{
 		//Grok:      syslogProcessor.Grok,
 		Publisher: &publisher.KafkaPublisher{
-      Broker:  "localhost:9092",
+      Broker:  broker,
       Topic:   "filebeat",
     },
 	}
@@ -45,7 +45,7 @@ func main() {
 	httpProcessor := &processor.HttpProcessor{
 		//Grok:      syslogProcessor.Grok,
 		Publisher: &publisher.KafkaPublisher{
-      Broker:  "localhost:9092",
+      Broker:  broker,
       Topic:   "http",
     },
 	}

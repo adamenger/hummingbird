@@ -20,7 +20,10 @@ type GrokParser struct {
 // NewGrokParser creates a new Grok parser.
 func NewGrokParser(patternsPath string) (*GrokParser, error) {
 
-  gp := &GrokParser{PatternsPath: patternsPath}
+  gp := &GrokParser{
+    Patterns: make(map[string]string),
+    PatternsPath: patternsPath,
+  }
 	gp.LoadPatterns()
 	
   g, err := grok.New(grok.Config{
