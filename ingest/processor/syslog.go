@@ -1,47 +1,34 @@
 package processor
 
 import (
-	"bufio"
 	"encoding/json"
 	"fmt"
 	"log"
-	"os"
-	"path/filepath"
-	"strings"
 
 	"github.com/mcuadros/go-syslog"
-	"github.com/trivago/grok"
   "github.com/adamenger/hummingbird/ingest"
   "github.com/adamenger/hummingbird/ingest/publisher"
+  "github.com/adamenger/hummingbird/ingest/parser"
 )
 
 type SyslogProcessor struct {
-	Grok          *grok.Grok
-	Config        *grok.Config
+	GrokParser    *parser.GrokParser
 	Publisher     publisher.Publisher
-	PatternsPath  string
 	SyslogChannel syslog.LogPartsChannel
 }
 
 func NewSyslogProcessor(patternsPath string, publisher publisher.Publisher) (*SyslogProcessor, error) {
-  grokConfig := grok.Config{}
-  syslogGrok, err := grok.New(grokConfig)
+  gp, err := parser.NewGrokParser(patternsPath)
 	if err != nil {
 		return nil, err
 	}
 
 	sp := &SyslogProcessor{
-    Grok:          syslogGrok,
-		PatternsPath:  patternsPath,
-		SyslogChannel: make(syslog.LogPartsChannel),
+    GrokParser:    gp,
     Publisher:     publisher,
+		SyslogChannel: make(syslog.LogPartsChannel),
 	}
 	
-  err = sp.LoadPatterns()
-	if err != nil {
-		return nil, err
-	}
-
 	return sp, nil
 }
 
@@ -66,59 +53,6 @@ func (sp *SyslogProcessor) StartSyslogServer() error {
 	return nil
 }
 
-func (sp *SyslogProcessor) LoadPatterns() error {
-	if sp.Config.Patterns == nil {
-		sp.Config.Patterns = make(map[string]string)
-	}
-
-	// Check if the path points to a directory. If so, append the glob pattern to match .grok files
-	if fi, err := os.Stat(sp.PatternsPath); err == nil {
-		if fi.IsDir() {
-			sp.PatternsPath = filepath.Join(sp.PatternsPath, "*.grok")
-		}
-	} else {
-		return fmt.Errorf("invalid path: %s", sp.PatternsPath)
-	}
-
-	files, err := filepath.Glob(sp.PatternsPath)
-	if err != nil {
-		return err
-	}
-
-	for _, fileName := range files {
-		file, err := os.Open(fileName)
-		if err != nil {
-			return err
-		}
-		defer file.Close()
-
-		scanner := bufio.NewScanner(file)
-		for scanner.Scan() {
-			line := scanner.Text()
-			if len(line) == 0 || line[0] == '#' {
-				// Skip empty lines or lines starting with a hash (comments)
-				continue
-			}
-
-			parts := strings.SplitN(line, " ", 2)
-			if len(parts) != 2 {
-				// Skip lines that don't seem to fit the expected pattern
-				continue
-			}
-
-			key := parts[0]
-			pattern := parts[1]
-			sp.Config.Patterns[key] = pattern
-		}
-
-		if err := scanner.Err(); err != nil {
-			return err
-		}
-	}
-	return nil
-
-}
-
 func (sp *SyslogProcessor) ProcessLogMessage(logParts map[string]interface{}) {
 	var message string
 	if contentVal, ok := logParts["message"]; ok && contentVal != nil {
@@ -134,8 +68,8 @@ func (sp *SyslogProcessor) ProcessLogMessage(logParts map[string]interface{}) {
 	// Before Grok parsing
 	if len(message) > 0 {
 		// Loop through patterns
-		for _, pattern := range sp.Config.Patterns {
-			values, err := sp.Grok.Parse(pattern, []byte(message))
+		for _, pattern := range sp.GrokParser.Patterns {
+			values, err := sp.GrokParser.Grok.Parse(pattern, []byte(message))
 			if err == nil && len(values) > 0 {
 				for k, v := range values {
 					parsedMessage[k] = string(v)

@@ -24,7 +24,7 @@ func main() {
     Broker:  "localhost:9092",
     Topic:   "filebeat",
   }
-	syslogProcessor, err := processor.NewSyslogProcessor("patterns/", kp)
+	syslogProcessor, err := processor.NewSyslogProcessor("patterns/syslog", kp)
 	if err != nil {
 		log.Fatalf("Failed to initialize syslog processor: %v", err)
 	}
@@ -35,7 +35,7 @@ func main() {
 	}
 
 	filebeatProcessor := &processor.FilebeatProcessor{
-		Grok:      syslogProcessor.Grok,
+		//Grok:      syslogProcessor.Grok,
 		Publisher: &publisher.KafkaPublisher{
       Broker:  "localhost:9092",
       Topic:   "filebeat",
@@ -43,7 +43,7 @@ func main() {
 	}
 
 	httpProcessor := &processor.HttpProcessor{
-		Grok:      syslogProcessor.Grok,
+		//Grok:      syslogProcessor.Grok,
 		Publisher: &publisher.KafkaPublisher{
       Broker:  "localhost:9092",
       Topic:   "http",
