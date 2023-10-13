@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"log"
 
+	"github.com/adamenger/hummingbird/ingest"
+	"github.com/adamenger/hummingbird/ingest/parser"
+	"github.com/adamenger/hummingbird/ingest/publisher"
 	"github.com/mcuadros/go-syslog"
-  "github.com/adamenger/hummingbird/ingest"
-  "github.com/adamenger/hummingbird/ingest/publisher"
-  "github.com/adamenger/hummingbird/ingest/parser"
 )
 
 type SyslogProcessor struct {
@@ -18,17 +18,17 @@ type SyslogProcessor struct {
 }
 
 func NewSyslogProcessor(patternsPath string, publisher publisher.Publisher) (*SyslogProcessor, error) {
-  gp, err := parser.NewGrokParser(patternsPath)
+	gp, err := parser.NewGrokParser(patternsPath)
 	if err != nil {
 		return nil, err
 	}
 
 	sp := &SyslogProcessor{
-    GrokParser:    gp,
-    Publisher:     publisher,
+		GrokParser:    gp,
+		Publisher:     publisher,
 		SyslogChannel: make(syslog.LogPartsChannel),
 	}
-	
+
 	return sp, nil
 }
 
@@ -95,7 +95,7 @@ func (sp *SyslogProcessor) ProcessLogMessage(logParts map[string]interface{}) {
 
 	err = sp.Publisher.Publish(jsonData)
 	if err != nil {
-    log.Printf("syslog: Failed to produce message to Kafka: %v", err)
+		log.Printf("syslog: Failed to produce message to Kafka: %v", err)
 	}
 }
 
